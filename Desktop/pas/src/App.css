@@ -1,0 +1,59 @@
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #f2f2f2;
+}
+
+h1 {
+  margin-top: 0;
+  font-size: 24px;
+}
+
+input {
+  width: 100%;
+  padding: 5px;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.password-card {
+  text-align: center;
+  margin: auto;
+  max-width: 400px;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+.strength-indicator {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.strength-section {
+  flex-grow: 1;
+  height: 10px;
+  margin: 0 2px;
+}
+
+.red {
+  background-color: red;
+}
+
+.yellow {
+  background-color: yellow;
+}
+
+.green {
+  background-color: green;
+}
+
+.gray {
+  background-color: gray;
+}
