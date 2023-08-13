@@ -1,5 +1,5 @@
 "use client";
-import { AiOutlineSearch } from "react-icons/ai";
+import SearchIcon from "@mui/icons-material/Search";
 
 interface InputProps {
   handleSearch: (event: React.KeyboardEvent<HTMLInputElement>) => void;
@@ -11,14 +11,11 @@ const Input = ({ handleSearch, setLocation }: InputProps) => {
     <form className="flex items-center md:w-2/4 w-full order-2 md:order-1">
       <input
         type="text"
-        placeholder="Search City"
-        className="w-full bg-transparent border-b-2 placeholder-white outline-none text-white"
+        className="w-full py-2 px-4 rounded-lg border-2 border-gray-300 focus:outline-none focus:border-blue-500 text-black placeholder-gray-400"
+        placeholder="Search..."
         onKeyDown={handleSearch}
         onChange={(e) => setLocation(e.target.value)}
       />
-      <div className="ml-[-25px] text-white cursor-pointer">
-        <AiOutlineSearch />
-      </div>
     </form>
   );
 };
