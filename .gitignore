@@ -1,0 +1,32 @@
+﻿# Visual Studio
+.vscode/
+*.code-workspace
+.vs/
+bin/
+obj/
+out/
+Debug/
+Release/
+*.user
+*.suo
+*.ncb
+*.pdb
+*.cache
+*.ilk
+*.log
+*.csproj.user
+*.dbmdl
+*.jfm
+appsettings.Development.json
+
+# NuGet
+*.nupkg
+project.lock.json
+artifacts/
+
+# Entity Framework
+Migrations/
+
+# Logs
+logs/
+*.log
