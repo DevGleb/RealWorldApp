@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using RealWorldApp.Data;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -8,10 +8,10 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using RealWorldApp.Services;
 using Microsoft.OpenApi.Models;
-using Microsoft.Extensions.Logging;
 using Serilog;
-
-
+using RealWorldApp.Middlewares;
+using Serilog.Events;
+using AspNetCoreRateLimit;
 
 namespace RealWorldApp
 {
@@ -20,33 +20,55 @@ namespace RealWorldApp
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+
+            builder.Services.AddMemoryCache();
+            builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+            builder.Services.Configure<IpRateLimitPolicies>(builder.Configuration.GetSection("IpRateLimitPolicies"));
+            builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+            builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+            builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+            builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>(); 
+
+
+            var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("CorsPolicy", builder =>
+                {
+                    builder.WithOrigins("http://localhost:3000", "https://localhost:7029")
+                           .AllowAnyMethod()
+                           .AllowAnyHeader()
+                           .AllowCredentials();
+                });
+            });
+
+
+
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Console()
+                .WriteTo.File("Logs/app_log.txt", rollingInterval: RollingInterval.Day)
+                .WriteTo.File("Logs/errors.log", rollingInterval: RollingInterval.Day, restrictedToMinimumLevel: LogEventLevel.Error)
+                .CreateLogger();
+
+            builder.Host.UseSerilog();
 
             builder.Services.AddFluentValidationAutoValidation();
             builder.Services.AddFluentValidationClientsideAdapters();
             builder.Services.AddValidatorsFromAssemblyContaining<ArticleValidator>();
             builder.Services.AddValidatorsFromAssemblyContaining<CommentValidator>();
-
-            Log.Logger = new LoggerConfiguration()
-                .WriteTo.Console()
-                .WriteTo.File("Logs/errors.log", rollingInterval: RollingInterval.Day) 
-                .CreateLogger();
-
-            builder.Host.UseSerilog();
+            builder.Services.AddValidatorsFromAssemblyContaining<UserValidator>();
+            builder.Services.AddValidatorsFromAssemblyContaining<LoginValidator>();
 
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            builder.Services.AddValidatorsFromAssemblyContaining<UserValidator>();
-            builder.Services.AddFluentValidationAutoValidation();
-
-            builder.Services.AddControllers();
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
             builder.Services.AddControllers().AddJsonOptions(options =>
             {
-                options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+                options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
             });
-
 
 
             var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -76,12 +98,13 @@ namespace RealWorldApp
 
             builder.Services.AddAuthorization();
             builder.Services.AddSingleton<JwtService>();
-            builder.Services.AddValidatorsFromAssemblyContaining<LoginValidator>();
+            builder.Services.AddScoped<IJwtService, JwtService>();
 
+
+            builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "RealWorldApp", Version = "v1" });
-
 
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
@@ -93,25 +116,24 @@ namespace RealWorldApp
                 });
 
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
                     {
+                        new OpenApiSecurityScheme
                         {
-                            new OpenApiSecurityScheme
+                            Reference = new OpenApiReference
                             {
-                                Reference = new OpenApiReference
-                                {
-                                    Type = ReferenceType.SecurityScheme,
-                                    Id = "Bearer"
-                                }
-                            },
-                            new string[] {}
-                        }
-                    });
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        new string[] {}
+                    }
+                });
             });
 
             var app = builder.Build();
+
             app.UseMiddleware<ErrorHandlingMiddleware>();
-
-
 
             if (app.Environment.IsDevelopment())
             {
@@ -120,10 +142,11 @@ namespace RealWorldApp
             }
 
             app.UseHttpsRedirection();
+            app.UseIpRateLimiting();
+            app.UseCors("CorsPolicy");
 
             app.UseAuthentication();
             app.UseAuthorization();
-
             app.MapControllers();
 
             app.Run();

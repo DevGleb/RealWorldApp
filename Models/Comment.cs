@@ -22,7 +22,8 @@ namespace RealWorldApp.Models
 
         public int ArticleId { get; set; }
         [ForeignKey("ArticleId")]
-        [JsonIgnore] 
+        [JsonIgnore]
         public Article? Article { get; set; }
     }
+
 }

@@ -18,7 +18,14 @@ namespace RealWorldApp.Models
         [Required]
         public string PasswordHash { get; set; } = string.Empty;
 
-        [JsonIgnore] 
+        public string Role { get; set; } = "User";
+
+        public string? Bio { get; set; } = string.Empty;
+
+        public string? Image { get; set; } = string.Empty;
+
+        [JsonIgnore]
         public List<Comment> Comments { get; set; } = new();
     }
+
 }

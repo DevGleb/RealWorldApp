@@ -18,6 +18,9 @@ namespace RealWorldApp.Models
         [Required]
         public string Body { get; set; } = string.Empty;
 
+        public string Slug { get; set; } = string.Empty;
+
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -27,5 +30,7 @@ namespace RealWorldApp.Models
 
         [JsonIgnore]
         public List<Comment> Comments { get; set; } = new();
+
+        public List<ArticleTag> ArticleTags { get; set; } = new();
     }
 }

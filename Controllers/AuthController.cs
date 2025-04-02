@@ -2,49 +2,100 @@
 using RealWorldApp.Data;
 using RealWorldApp.Models;
 using RealWorldApp.Services;
-using BCrypt.Net;
+using RealWorldApp.DTOs;
+using Serilog;
 
 namespace RealWorldApp.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly JwtService _jwtService;
+        private readonly IJwtService _jwtService;
 
-        public AuthController(AppDbContext context, JwtService jwtService)
+        public AuthController(AppDbContext context, IJwtService jwtService)
         {
             _context = context;
             _jwtService = jwtService;
         }
 
-        [HttpPost("register")]
-        public IActionResult Register([FromBody] User user)
+        [HttpPost("api/users")]
+        public IActionResult Register([FromBody] RegisterRequest request)
         {
-            if (_context.Users.Any(u => u.Email == user.Email))
+            var data = request.User;
+
+            if (_context.Users.Any(u => u.Email == data.Email))
             {
-                return BadRequest(new { message = "Email already in use" });
+                return BadRequest(new
+                {
+                    errors = new { email = new[] { "is already taken" } }
+                });
             }
 
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash);
+            if (_context.Users.Any(u => u.Username == data.Username))
+            {
+                return BadRequest(new
+                {
+                    errors = new { username = new[] { "is already taken" } }
+                });
+            }
+
+            var user = new User
+            {
+                Email = data.Email,
+                Username = data.Username,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(data.Password),
+                Bio = "",
+                Image = ""
+            };
+
             _context.Users.Add(user);
             _context.SaveChanges();
-            return Ok(new { message = "User registered successfully" });
+
+            var token = _jwtService.GenerateToken(user.Id, user.Email);
+
+            var response = new
+            {
+                user = new
+                {
+                    email = user.Email,
+                    username = user.Username,
+                    token,
+                    bio = user.Bio,
+                    image = user.Image
+                }
+            };
+
+            return Created("/api/user", response);
         }
 
-        [HttpPost("login")]
+        [HttpPost("api/users/login")]
         public IActionResult Login([FromBody] LoginRequest request)
         {
-            var dbUser = _context.Users.FirstOrDefault(u => u.Email == request.Email);
-            if (dbUser == null || !BCrypt.Net.BCrypt.Verify(request.PasswordHash, dbUser.PasswordHash))
+            var data = request.User;
+
+            var dbUser = _context.Users.FirstOrDefault(u => u.Email == data.Email);
+            if (dbUser == null || !BCrypt.Net.BCrypt.Verify(data.Password, dbUser.PasswordHash))
             {
-                return Unauthorized(new { message = "Invalid credentials" });
+                return Unauthorized(new
+                {
+                    errors = new { credentials = new[] { "Invalid email or password" } }
+                });
             }
 
             var token = _jwtService.GenerateToken(dbUser.Id, dbUser.Email);
-            return Ok(new { token });
-        }
 
+            return Ok(new
+            {
+                user = new
+                {
+                    email = dbUser.Email,
+                    username = dbUser.Username,
+                    token,
+                    bio = dbUser.Bio ?? "",
+                    image = dbUser.Image ?? ""
+                }
+            });
+        }
     }
 }

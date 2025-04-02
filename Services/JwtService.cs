@@ -5,7 +5,7 @@ using System.Text;
 
 namespace RealWorldApp.Services
 {
-    public class JwtService
+    public class JwtService : IJwtService
     {
         private readonly IConfiguration _configuration;
 

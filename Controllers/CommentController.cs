@@ -1,98 +1,111 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RealWorldApp.Data;
 using RealWorldApp.Models;
 using System.Security.Claims;
-using RealWorldApp.Data;
 
 namespace RealWorldApp.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/articles/{slug}/comments")]
     [ApiController]
     public class CommentController : ControllerBase
     {
         private readonly AppDbContext _context;
 
-        private readonly ILogger<CommentController> _logger;
-
-        public CommentController(AppDbContext context, ILogger<CommentController> logger)
+        public CommentController(AppDbContext context)
         {
             _context = context;
-            _logger = logger;
         }
 
-
-        [HttpPost("{articleId}")]
+        [HttpPost]
         [Authorize]
-        public async Task<IActionResult> AddComment(int articleId, [FromBody] Comment comment)
+        public async Task<IActionResult> AddComment(string slug, [FromBody] Comment comment)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            var article = await _context.Articles.FindAsync(articleId);
-
+            var article = await _context.Articles.FirstOrDefaultAsync(a => a.Slug == slug);
             if (article == null)
-                return NotFound("Article not found");
+                return NotFound();
 
+            if (string.IsNullOrWhiteSpace(comment.Body))
+                return BadRequest(new { errors = new { body = new[] { "Comment body is required." } } });
+
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var user = await _context.Users.FindAsync(userId);
+
+            comment.ArticleId = article.Id;
             comment.AuthorId = userId;
-            comment.ArticleId = articleId;
             comment.CreatedAt = DateTime.UtcNow;
             comment.UpdatedAt = DateTime.UtcNow;
 
             _context.Comments.Add(comment);
             await _context.SaveChangesAsync();
 
-            return Ok(comment);
+            var responseBody = new
+            {
+                comment = new
+                {
+                    id = comment.Id,
+                    createdAt = comment.CreatedAt,
+                    updatedAt = comment.UpdatedAt,
+                    body = comment.Body,
+                    author = new
+                    {
+                        username = user!.Username,
+                        bio = user.Bio ?? "",
+                        image = user.Image ?? "",
+                        following = false
+                    }
+                }
+            };
+
+            return Created($"/api/articles/{slug}/comments/{comment.Id}", responseBody);
         }
 
-        [HttpGet("{articleId}")]
-        public async Task<IActionResult> GetComments(int articleId)
+
+        [HttpGet]
+        public async Task<IActionResult> GetComments(string slug)
         {
+            var article = await _context.Articles.FirstOrDefaultAsync(a => a.Slug == slug);
+            if (article == null)
+                return NotFound();
+
             var comments = await _context.Comments
-                .Where(c => c.ArticleId == articleId)
+                .Where(c => c.ArticleId == article.Id)
                 .Include(c => c.Author)
+                .OrderBy(c => c.CreatedAt)
                 .ToListAsync();
 
-            return Ok(comments);
-        }
-
-        [HttpPut("{commentId}")]
-        [Authorize]
-        public async Task<IActionResult> UpdateComment(int commentId, [FromBody] Comment updatedComment)
-        {
-            _logger.LogInformation($"Updating comment with ID {commentId}");
-
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            var comment = await _context.Comments.FindAsync(commentId);
-
-            if (comment == null)
+            var result = comments.Select(c => new
             {
-                _logger.LogWarning($"Comment with ID {commentId} not found.");
-                return NotFound(new { message = $"Comment with ID {commentId} not found." });
-            }
+                id = c.Id,
+                createdAt = c.CreatedAt,
+                updatedAt = c.UpdatedAt,
+                body = c.Body,
+                author = new
+                {
+                    username = c.Author!.Username,
+                    bio = "",
+                    image = "",
+                    following = false
+                }
+            });
 
-            if (comment.AuthorId != userId)
-            {
-                _logger.LogWarning($"User {userId} is not the owner of comment {commentId}");
-                return Forbid();
-            }
-
-            comment.Body = updatedComment.Body;
-            comment.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-            _logger.LogInformation($"Comment {commentId} updated successfully");
-
-            return Ok(comment);
+            return Ok(new { comments = result });
         }
 
         [HttpDelete("{commentId}")]
         [Authorize]
-        public async Task<IActionResult> DeleteComment(int commentId)
+        public async Task<IActionResult> DeleteComment(string slug, int commentId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            var comment = await _context.Comments.FindAsync(commentId);
 
+            var article = await _context.Articles.FirstOrDefaultAsync(a => a.Slug == slug);
+            if (article == null)
+                return NotFound();
+
+            var comment = await _context.Comments.FirstOrDefaultAsync(c => c.Id == commentId && c.ArticleId == article.Id);
             if (comment == null)
-                return NotFound("Comment not found");
+                return NotFound();
 
             if (comment.AuthorId != userId)
                 return Forbid();
@@ -100,45 +113,7 @@ namespace RealWorldApp.Controllers
             _context.Comments.Remove(comment);
             await _context.SaveChangesAsync();
 
-            return Ok("Comment deleted");
+            return NoContent(); 
         }
-
-        [HttpGet("{articleId}/comments")]
-        public async Task<IActionResult> GetComments(
-            int articleId,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 5,
-            [FromQuery] string sortBy = "createdAt",
-            [FromQuery] string order = "asc")
-        {
-            var query = _context.Comments
-                .Where(c => c.ArticleId == articleId)
-                .Include(c => c.Author) 
-                .AsQueryable(); 
-
-  
-            query = sortBy.ToLower() switch
-            {
-                "createdat" => order.ToLower() == "asc" ? query.OrderBy(c => c.CreatedAt) : query.OrderByDescending(c => c.CreatedAt),
-                _ => query.OrderBy(c => c.CreatedAt)
-            };
-
-
-            var totalItems = await query.CountAsync();
-            var comments = await query
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            return Ok(new
-            {
-                totalItems,
-                page,
-                pageSize,
-                totalPages = (int)Math.Ceiling(totalItems / (double)pageSize),
-                comments
-            });
-        }
-
     }
 }

@@ -1,55 +1,92 @@
-﻿using Microsoft.AspNetCore.Http;
-using System;
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using FluentValidation;
+using Microsoft.AspNetCore.Http;
+using Serilog;
 
-public class ErrorHandlingMiddleware
+namespace RealWorldApp.Middlewares
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<ErrorHandlingMiddleware> _logger;
-
-    public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
+    public class ErrorHandlingMiddleware
     {
-        _next = next;
-        _logger = logger;
-    }
+        private readonly RequestDelegate _next;
 
-    public async Task Invoke(HttpContext context)
-    {
-        try
+        public ErrorHandlingMiddleware(RequestDelegate next)
         {
-            await _next(context);
+            _next = next;
         }
-        catch (Exception ex)
+
+        public async Task Invoke(HttpContext context)
         {
-            _logger.LogError(ex, "Unhandled exception occurred");
-            await HandleExceptionAsync(context, ex);
+            try
+            {
+                await _next(context);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Unhandled exception: {Message}", ex.Message);
+                await HandleExceptionAsync(context, ex);
+            }
         }
-    }
 
-    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
-    {
-        var response = context.Response;
-        response.ContentType = "application/json";
-
-        var statusCode = exception switch
+        private async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
-            KeyNotFoundException => HttpStatusCode.NotFound, // 404
-            UnauthorizedAccessException => HttpStatusCode.Unauthorized, // 401
-            ArgumentException => HttpStatusCode.BadRequest, // 400
-            _ => HttpStatusCode.InternalServerError // 500
-        };
+            context.Response.ContentType = "application/json";
 
-        response.StatusCode = (int)statusCode;
+            object errorBody;
+            int statusCode;
 
-        var errorResponse = new
-        {
-            status = response.StatusCode,
-            message = exception.Message
-        };
+            switch (exception)
+            {
+                case ValidationException validationException:
+                    statusCode = (int)HttpStatusCode.BadRequest;
+                    errorBody = new
+                    {
+                        errors = validationException.Errors
+                            .GroupBy(e => e.PropertyName)
+                            .ToDictionary(
+                                g => g.Key,
+                                g => g.Select(e => e.ErrorMessage).ToArray()
+                            )
+                    };
+                    break;
 
-        return response.WriteAsync(JsonSerializer.Serialize(errorResponse));
+                case KeyNotFoundException _:
+                    statusCode = (int)HttpStatusCode.NotFound;
+                    errorBody = new
+                    {
+                        errors = new
+                        {
+                            body = new[] { "Resource not found" }
+                        }
+                    };
+                    break;
+
+                case UnauthorizedAccessException _:
+                    statusCode = (int)HttpStatusCode.Unauthorized;
+                    errorBody = new
+                    {
+                        errors = new
+                        {
+                            body = new[] { "Unauthorized access" }
+                        }
+                    };
+                    break;
+
+                default:
+                    statusCode = (int)HttpStatusCode.InternalServerError;
+                    errorBody = new
+                    {
+                        errors = new
+                        {
+                            body = new[] { "An unexpected error occurred." }
+                        }
+                    };
+                    break;
+            }
+
+            context.Response.StatusCode = statusCode;
+            var jsonResponse = JsonSerializer.Serialize(errorBody);
+            await context.Response.WriteAsync(jsonResponse);
+        }
     }
 }

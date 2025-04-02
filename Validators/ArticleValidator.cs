@@ -14,5 +14,10 @@ public class ArticleValidator : AbstractValidator<Article>
 
         RuleFor(a => a.Body)
             .NotEmpty().WithMessage("Body is required.");
+
+
+        RuleFor(a => a.Slug)
+            .Must(string.IsNullOrWhiteSpace)
+            .WithMessage("Slug should not be provided manually.");
     }
 }
