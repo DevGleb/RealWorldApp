@@ -1,0 +1,124 @@
+﻿################
+# IDE / Editor
+################
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.ncb
+*.dbmdl
+*.sln.docstates
+*.csproj.user
+*.cache
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+################
+# Build Outputs
+################
+
+bin/
+obj/
+out/
+Debug/
+Release/
+
+################
+# Logs
+################
+
+logs/
+*.log
+
+################
+# App Settings 
+################
+
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.json
+secrets.json
+*.secrets.json
+
+################
+# Entity Framework
+################
+
+Migrations/
+*.mdf
+*.ldf
+
+################
+# Test / Coverage Artifacts
+################
+
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*.testhost.dll
+*.TestAdapter.dll
+
+# dotnet-watch db
+**/*.dotnet-*-watcher.db
+
+################
+# NuGet
+################
+
+*.nupkg
+*.snupkg
+project.lock.json
+project.assets.json
+packages/
+artifacts/
+
+################
+# OS / Misc
+################
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
+# SQLite / Local DB files
+*.db
+*.sqlite
+
+# Global.json / SDK tools
+global.json
+.tye/
+
+# Node/NPM 
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+################
+# Docker 
+################
+
+Dockerfile
+docker-compose.*
+*.dockerignore
