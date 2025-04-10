@@ -13,6 +13,12 @@ using RealWorldApp.Middlewares;
 using Serilog.Events;
 using AspNetCoreRateLimit;
 
+
+using RealWorldApp.Application.Interfaces;
+using RealWorldApp.Application.Services;
+using RealWorldApp.Domain.Interfaces;
+using RealWorldApp.Infrastructure.Repositories;
+
 namespace RealWorldApp
 {
     public class Program
@@ -28,8 +34,7 @@ namespace RealWorldApp
             builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
             builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
             builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
-            builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>(); 
-
+            builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
 
             var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
 
@@ -43,8 +48,6 @@ namespace RealWorldApp
                            .AllowCredentials();
                 });
             });
-
-
 
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
@@ -69,7 +72,6 @@ namespace RealWorldApp
             {
                 options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
             });
-
 
             var jwtSettings = builder.Configuration.GetSection("Jwt");
             var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
@@ -99,6 +101,21 @@ namespace RealWorldApp
             builder.Services.AddAuthorization();
             builder.Services.AddSingleton<JwtService>();
             builder.Services.AddScoped<IJwtService, JwtService>();
+
+            builder.Services.AddScoped<IArticleService, ArticleService>();
+            builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
+            builder.Services.AddScoped<IFavoriteRepository, FavoriteRepository>();
+            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<ICommentService, CommentService>();
+            builder.Services.AddScoped<ICommentRepository, CommentRepository>();
+            builder.Services.AddScoped<IProfileService, ProfileService>();
+            builder.Services.AddScoped<ITagService, TagService>();
+            builder.Services.AddScoped<ITagRepository, TagRepository>();
+
+
+
 
 
             builder.Services.AddEndpointsApiExplorer();

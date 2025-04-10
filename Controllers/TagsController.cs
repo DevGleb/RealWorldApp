@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using RealWorldApp.Data;
-using System.Linq;
+using RealWorldApp.Application.Interfaces;
 
 namespace RealWorldApp.Controllers
 {
@@ -8,22 +7,17 @@ namespace RealWorldApp.Controllers
     [ApiController]
     public class TagsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ITagService _tagService;
 
-        public TagsController(AppDbContext context)
+        public TagsController(ITagService tagService)
         {
-            _context = context;
+            _tagService = tagService;
         }
 
         [HttpGet]
-        public IActionResult GetTags()
+        public async Task<IActionResult> GetAllTags()
         {
-            var tags = _context.Tags
-                .Select(t => t.Name)
-                .Distinct()
-                .OrderBy(name => name)
-                .ToList();
-
+            var tags = await _tagService.GetAllTagsAsync();
             return Ok(new { tags });
         }
     }

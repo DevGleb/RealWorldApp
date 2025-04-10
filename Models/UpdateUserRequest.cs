@@ -1,12 +1,11 @@
-﻿namespace RealWorldApp.DTOs
+﻿namespace RealWorldApp.Models
 {
     public class UpdateUserRequest
     {
-        public UpdateUserData User { get; set; } = new();
+        public UpdateUserDto User { get; set; } = new();
     }
 
-
-    public class UpdateUserData
+    public class UpdateUserDto
     {
         public string? Email { get; set; }
         public string? Username { get; set; }

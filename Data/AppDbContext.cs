@@ -39,18 +39,18 @@ namespace RealWorldApp.Data
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
- 
+
             modelBuilder.Entity<Follow>()
                 .HasOne(f => f.Follower)
                 .WithMany()
                 .HasForeignKey(f => f.FollowerId)
-                .OnDelete(DeleteBehavior.NoAction); 
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Follow>()
                 .HasOne(f => f.Following)
                 .WithMany()
                 .HasForeignKey(f => f.FollowingId)
-                .OnDelete(DeleteBehavior.NoAction); 
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Favorite>()
                 .HasIndex(f => new { f.UserId, f.ArticleId })
@@ -60,7 +60,7 @@ namespace RealWorldApp.Data
                 .HasOne(f => f.User)
                 .WithMany()
                 .HasForeignKey(f => f.UserId)
-                .OnDelete(DeleteBehavior.Restrict); 
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Favorite>()
                 .HasOne(f => f.Article)
