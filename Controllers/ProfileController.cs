@@ -1,155 +1,48 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RealWorldApp.Data;
+using RealWorldApp.Application.Interfaces;
 using System.Security.Claims;
 
 namespace RealWorldApp.Controllers
 {
-    [ApiController]
     [Route("api/profiles")]
+    [ApiController]
     public class ProfileController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IProfileService _profileService;
 
-        public ProfileController(AppDbContext context)
+        public ProfileController(IProfileService profileService)
         {
-            _context = context;
+            _profileService = profileService;
         }
 
         [HttpGet("{username}")]
         public async Task<IActionResult> GetProfile(string username)
         {
-            var user = await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Username == username);
-
-            if (user == null)
-            {
-                return NotFound(new
-                {
-                    errors = new
-                    {
-                        profile = new[] { "User not found" }
-                    }
-                });
-            }
-
-            bool following = false;
-
-            var currentUserId = User.Identity?.IsAuthenticated == true
+            int? currentUserId = User.Identity?.IsAuthenticated == true
                 ? int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value)
-                : (int?)null;
+                : null;
 
-            if (currentUserId != null)
-            {
-                following = await _context.Follows
-                    .AnyAsync(f => f.FollowerId == currentUserId && f.FollowingId == user.Id);
-            }
-
-            return Ok(new
-            {
-                profile = new
-                {
-                    username = user.Username,
-                    bio = user.Bio ?? "",
-                    image = user.Image ?? "",
-                    following
-                }
-            });
+            var result = await _profileService.GetProfileAsync(username, currentUserId);
+            return result is null ? NotFound() : Ok(new { profile = result });
         }
 
-        [Authorize]
         [HttpPost("{username}/follow")]
+        [Authorize]
         public async Task<IActionResult> FollowUser(string username)
         {
-            var targetUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
-            if (targetUser == null)
-            {
-                return NotFound(new
-                {
-                    errors = new
-                    {
-                        profile = new[] { "User not found" }
-                    }
-                });
-            }
-
             var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-
-            if (targetUser.Id == currentUserId)
-            {
-                return BadRequest(new
-                {
-                    errors = new
-                    {
-                        follow = new[] { "You cannot follow yourself." }
-                    }
-                });
-            }
-
-            var alreadyFollowing = await _context.Follows.AnyAsync(f =>
-                f.FollowerId == currentUserId && f.FollowingId == targetUser.Id);
-
-            if (!alreadyFollowing)
-            {
-                _context.Follows.Add(new Models.Follow
-                {
-                    FollowerId = currentUserId,
-                    FollowingId = targetUser.Id
-                });
-                await _context.SaveChangesAsync();
-            }
-
-            return Ok(new
-            {
-                profile = new
-                {
-                    username = targetUser.Username,
-                    bio = targetUser.Bio ?? "",
-                    image = targetUser.Image ?? "",
-                    following = true
-                }
-            });
+            var result = await _profileService.FollowUserAsync(username, currentUserId);
+            return result is null ? NotFound() : Ok(new { profile = result });
         }
 
-        [Authorize]
         [HttpDelete("{username}/follow")]
+        [Authorize]
         public async Task<IActionResult> UnfollowUser(string username)
         {
-            var targetUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
-            if (targetUser == null)
-            {
-                return NotFound(new
-                {
-                    errors = new
-                    {
-                        profile = new[] { "User not found" }
-                    }
-                });
-            }
-
             var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-
-            var follow = await _context.Follows.FirstOrDefaultAsync(f =>
-                f.FollowerId == currentUserId && f.FollowingId == targetUser.Id);
-
-            if (follow != null)
-            {
-                _context.Follows.Remove(follow);
-                await _context.SaveChangesAsync();
-            }
-
-            return Ok(new
-            {
-                profile = new
-                {
-                    username = targetUser.Username,
-                    bio = targetUser.Bio ?? "",
-                    image = targetUser.Image ?? "",
-                    following = false
-                }
-            });
+            var result = await _profileService.UnfollowUserAsync(username, currentUserId);
+            return result is null ? NotFound() : Ok(new { profile = result });
         }
     }
 }
