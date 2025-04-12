@@ -3,6 +3,7 @@ using RealWorldApp.Domain.Interfaces;
 using RealWorldApp.Models;
 using RealWorldApp.Services;
 using BCrypt.Net;
+using RealWorldApp.DTOs.Responses;
 
 namespace RealWorldApp.Application.Services
 {
@@ -17,25 +18,25 @@ namespace RealWorldApp.Application.Services
             _jwtService = jwtService;
         }
 
-        public async Task<object?> GetCurrentUserAsync(int userId)
+        public async Task<CurrentUserResponse?> GetCurrentUserAsync(int userId)
         {
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null) return null;
 
-            return new
+            return new CurrentUserResponse
             {
-                user = new
+                User = new UserDto
                 {
-                    username = user.Username,
-                    email = user.Email,
-                    bio = user.Bio,
-                    image = user.Image,
-                    token = _jwtService.GenerateToken(user.Id, user.Email)
+                    Username = user.Username,
+                    Email = user.Email,
+                    Bio = user.Bio,
+                    Image = user.Image,
+                    Token = _jwtService.GenerateToken(user.Id, user.Email)
                 }
             };
         }
 
-        public async Task<object?> UpdateCurrentUserAsync(int userId, UpdateUserRequest request)
+        public async Task<CurrentUserResponse?> UpdateCurrentUserAsync(int userId, UpdateUserRequest request)
         {
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null) return null;
@@ -57,17 +58,18 @@ namespace RealWorldApp.Application.Services
 
             await _userRepository.UpdateAsync(user);
 
-            return new
+            return new CurrentUserResponse
             {
-                user = new
+                User = new UserDto
                 {
-                    username = user.Username,
-                    email = user.Email,
-                    bio = user.Bio,
-                    image = user.Image,
-                    token = _jwtService.GenerateToken(user.Id, user.Email)
+                    Username = user.Username,
+                    Email = user.Email,
+                    Bio = user.Bio,
+                    Image = user.Image,
+                    Token = _jwtService.GenerateToken(user.Id, user.Email)
                 }
             };
         }
+
     }
 }

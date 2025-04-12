@@ -1,12 +1,14 @@
 ﻿using RealWorldApp.DTOs;
+using RealWorldApp.DTOs.Responses;
 using RealWorldApp.Models;
 
 namespace RealWorldApp.Application.Interfaces
 {
     public interface IAuthService
     {
-        Task<object> RegisterAsync(RegisterRequest request);
-        Task<object?> LoginAsync(LoginRequest request);
-        Task<object?> GetCurrentUserAsync(int userId);
+        Task<CurrentUserResponse> RegisterAsync(RegisterRequest request);        
+        Task<CurrentUserResponse?> LoginAsync(LoginRequest request);            
+        Task<CurrentUserResponse?> GetCurrentUserAsync(int userId);           
     }
+
 }

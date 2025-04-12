@@ -1,5 +1,6 @@
 ﻿using RealWorldApp.Application.Interfaces;
 using RealWorldApp.Domain.Interfaces;
+using RealWorldApp.DTOs.Responses;
 using RealWorldApp.Models;
 
 namespace RealWorldApp.Application.Services
@@ -13,7 +14,7 @@ namespace RealWorldApp.Application.Services
             _userRepository = userRepository;
         }
 
-        public async Task<object?> GetProfileAsync(string username, int? currentUserId)
+        public async Task<ProfileResponse?> GetProfileAsync(string username, int? currentUserId)
         {
             var targetUser = await _userRepository.GetByUsernameAsync(username);
             if (targetUser == null) return null;
@@ -21,52 +22,52 @@ namespace RealWorldApp.Application.Services
             var isFollowing = currentUserId.HasValue &&
                               await _userRepository.IsFollowingAsync(currentUserId.Value, targetUser.Id);
 
-            return new
+            return new ProfileResponse
             {
-                profile = new
+                Profile = new AuthorResponse
                 {
-                    username = targetUser.Username,
-                    bio = targetUser.Bio,
-                    image = targetUser.Image,
-                    following = isFollowing
+                    Username = targetUser.Username,
+                    Bio = targetUser.Bio,
+                    Image = targetUser.Image,
+                    Following = isFollowing
                 }
             };
         }
 
-        public async Task<object?> FollowUserAsync(string username, int currentUserId)
+        public async Task<ProfileResponse?> FollowUserAsync(string username, int currentUserId)
         {
             var targetUser = await _userRepository.GetByUsernameAsync(username);
             if (targetUser == null || targetUser.Id == currentUserId) return null;
 
             await _userRepository.FollowAsync(currentUserId, targetUser.Id);
 
-            return new
+            return new ProfileResponse
             {
-                profile = new
+                Profile = new AuthorResponse
                 {
-                    username = targetUser.Username,
-                    bio = targetUser.Bio,
-                    image = targetUser.Image,
-                    following = true
+                    Username = targetUser.Username,
+                    Bio = targetUser.Bio,
+                    Image = targetUser.Image,
+                    Following = true
                 }
             };
         }
 
-        public async Task<object?> UnfollowUserAsync(string username, int currentUserId)
+        public async Task<ProfileResponse?> UnfollowUserAsync(string username, int currentUserId)
         {
             var targetUser = await _userRepository.GetByUsernameAsync(username);
             if (targetUser == null || targetUser.Id == currentUserId) return null;
 
             await _userRepository.UnfollowAsync(currentUserId, targetUser.Id);
 
-            return new
+            return new ProfileResponse
             {
-                profile = new
+                Profile = new AuthorResponse
                 {
-                    username = targetUser.Username,
-                    bio = targetUser.Bio,
-                    image = targetUser.Image,
-                    following = false
+                    Username = targetUser.Username,
+                    Bio = targetUser.Bio,
+                    Image = targetUser.Image,
+                    Following = false
                 }
             };
         }

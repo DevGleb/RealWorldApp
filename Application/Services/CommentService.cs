@@ -1,5 +1,6 @@
 ﻿using RealWorldApp.Application.Interfaces;
 using RealWorldApp.Domain.Interfaces;
+using RealWorldApp.DTOs.Responses;
 using RealWorldApp.Models;
 
 namespace RealWorldApp.Application.Services
@@ -20,7 +21,7 @@ namespace RealWorldApp.Application.Services
             _userRepository = userRepository;
         }
 
-        public async Task<object?> AddCommentAsync(string slug, Comment comment, int userId)
+        public async Task<CommentResponse?> AddCommentAsync(string slug, Comment comment, int userId)
         {
             var article = await _articleRepository.GetBySlugAsync(slug);
             if (article == null) return null;
@@ -34,46 +35,46 @@ namespace RealWorldApp.Application.Services
 
             var author = await _userRepository.GetByIdAsync(userId);
 
-            return new
+            return new CommentResponse
             {
-                comment = new
+                Id = comment.Id,
+                CreatedAt = comment.CreatedAt,
+                UpdatedAt = comment.UpdatedAt,
+                Body = comment.Body,
+                Author = new AuthorResponse
                 {
-                    id = comment.Id,
-                    createdAt = comment.CreatedAt,
-                    updatedAt = comment.UpdatedAt,
-                    body = comment.Body,
-                    author = new
-                    {
-                        username = author?.Username,
-                        bio = author?.Bio,
-                        image = author?.Image,
-                        following = false
-                    }
+                    Username = author?.Username ?? "",
+                    Bio = author?.Bio ?? "",
+                    Image = author?.Image ?? "",
+                    Following = false
                 }
             };
+
         }
 
-        public async Task<IEnumerable<object>> GetCommentsAsync(string slug)
+        public async Task<IEnumerable<CommentResponse>> GetCommentsAsync(string slug)
         {
             var article = await _articleRepository.GetBySlugAsync(slug);
-            if (article == null) return Enumerable.Empty<object>();
+            if (article == null) return Enumerable.Empty<CommentResponse>();
+
 
             var comments = await _commentRepository.GetByArticleIdAsync(article.Id);
 
-            return comments.Select(comment => new
+            return comments.Select(comment => new CommentResponse
             {
-                id = comment.Id,
-                createdAt = comment.CreatedAt,
-                updatedAt = comment.UpdatedAt,
-                body = comment.Body,
-                author = new
+                Id = comment.Id,
+                CreatedAt = comment.CreatedAt,
+                UpdatedAt = comment.UpdatedAt,
+                Body = comment.Body,
+                Author = new AuthorResponse
                 {
-                    username = comment.Author?.Username,
-                    bio = comment.Author?.Bio,
-                    image = comment.Author?.Image,
-                    following = false
+                    Username = comment.Author?.Username ?? "",
+                    Bio = comment.Author?.Bio ?? "",
+                    Image = comment.Author?.Image ?? "",
+                    Following = false
                 }
             });
+
         }
 
         public async Task<bool> DeleteCommentAsync(string slug, int commentId, int userId)

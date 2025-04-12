@@ -22,7 +22,9 @@ namespace RealWorldApp.Controllers
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             var result = await _authService.LoginAsync(request);
-            return result is null ? Unauthorized(new { errors = new { login = new[] { "Invalid email or password." } } }) : Ok(result);
+            return result is null
+                ? Unauthorized(new { errors = new { login = new[] { "Invalid email or password." } } })
+                : Ok(new { user = result });
         }
 
         [HttpPost]
@@ -31,7 +33,7 @@ namespace RealWorldApp.Controllers
             try
             {
                 var result = await _authService.RegisterAsync(request);
-                return Ok(result);
+                return Ok(new { user = result });
             }
             catch (Exception ex)
             {

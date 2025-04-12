@@ -1,9 +1,11 @@
-﻿namespace RealWorldApp.Application.Interfaces
+﻿using RealWorldApp.DTOs.Responses;
+
+namespace RealWorldApp.Application.Interfaces
 {
     public interface IProfileService
     {
-        Task<object?> GetProfileAsync(string username, int? currentUserId);
-        Task<object?> FollowUserAsync(string username, int currentUserId);
-        Task<object?> UnfollowUserAsync(string username, int currentUserId);
+        Task<ProfileResponse?> GetProfileAsync(string username, int? currentUserId);
+        Task<ProfileResponse?> FollowUserAsync(string username, int currentUserId);
+        Task<ProfileResponse?> UnfollowUserAsync(string username, int currentUserId);
     }
 }

@@ -23,7 +23,7 @@ namespace RealWorldApp.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var result = await _userService.GetCurrentUserAsync(userId);
-            return result is null ? NotFound() : Ok(result);
+            return result is null ? NotFound() : Ok(new { user = result });
         }
 
         [HttpPut]
@@ -32,7 +32,7 @@ namespace RealWorldApp.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var result = await _userService.UpdateCurrentUserAsync(userId, request);
-            return result is null ? NotFound() : Ok(result);
+            return result is null ? NotFound() : Ok(new { user = result });
         }
     }
 }

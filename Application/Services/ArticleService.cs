@@ -1,6 +1,7 @@
 ﻿using RealWorldApp.Application.Interfaces;
 using RealWorldApp.Domain.Interfaces;
 using RealWorldApp.DTOs;
+using RealWorldApp.DTOs.Responses;
 using RealWorldApp.Models;
 
 namespace RealWorldApp.Application.Services
@@ -21,22 +22,26 @@ namespace RealWorldApp.Application.Services
             _favoriteRepository = favoriteRepository;
         }
 
-        public async Task<object> GetAllArticlesAsync(int limit, int offset, int? userId)
+        public async Task<ArticleListResponse> GetAllArticlesAsync(int limit, int offset, int? userId)
         {
             var totalCount = await _articleRepository.CountAsync();
             var articles = await _articleRepository.GetAllAsync(limit, offset);
 
-            var result = new List<object>();
+            var result = new List<ArticleResponse>();
             foreach (var article in articles)
             {
                 var articleData = await BuildArticleData(article, userId);
                 result.Add(articleData);
             }
 
-            return new { articles = result, articlesCount = totalCount };
+            return new ArticleListResponse
+            {
+                Articles = result,
+                ArticlesCount = totalCount
+            };
         }
 
-        public async Task<object?> GetArticleBySlugAsync(string slug, int? userId)
+        public async Task<ArticleResponse?> GetArticleBySlugAsync(string slug, int? userId)
         {
             var article = await _articleRepository.GetBySlugAsync(slug);
             if (article == null) return null;
@@ -44,35 +49,7 @@ namespace RealWorldApp.Application.Services
             return await BuildArticleData(article, userId);
         }
 
-        private async Task<object> BuildArticleData(Article article, int? userId)
-        {
-            var author = await _userRepository.GetByIdAsync(article.AuthorId);
-            var tagList = await _articleRepository.GetTagsAsync(article.Id);
-            var favoritesCount = await _favoriteRepository.CountByArticleIdAsync(article.Id);
-            var isFavorited = userId.HasValue && await _favoriteRepository.IsFavoritedAsync(article.Id, userId.Value);
-
-            return new
-            {
-                slug = article.Slug,
-                title = article.Title,
-                description = article.Description,
-                body = article.Body,
-                createdAt = article.CreatedAt,
-                updatedAt = article.UpdatedAt,
-                tagList,
-                favorited = isFavorited,
-                favoritesCount,
-                author = new
-                {
-                    username = author?.Username,
-                    bio = author?.Bio ?? "",
-                    image = author?.Image ?? "",
-                    following = false
-                }
-            };
-        }
-
-        public async Task<object> CreateArticleAsync(ArticleData data, int userId)
+        public async Task<ArticleResponse> CreateArticleAsync(ArticleData data, int userId)
         {
             var article = new Article
             {
@@ -99,14 +76,10 @@ namespace RealWorldApp.Application.Services
             return await BuildArticleData(article, userId);
         }
 
-
-        public async Task<object?> UpdateArticleAsync(string slug, Article updated, int userId)
+        public async Task<ArticleResponse?> UpdateArticleAsync(string slug, ArticleData updated, int userId)
         {
             var article = await _articleRepository.GetBySlugAsync(slug);
-            if (article == null)
-                return null;
-
-            if (article.AuthorId != userId)
+            if (article == null || article.AuthorId != userId)
                 return null;
 
             article.Title = updated.Title ?? article.Title;
@@ -123,36 +96,34 @@ namespace RealWorldApp.Application.Services
         public async Task<bool> DeleteArticleAsync(string slug, int userId)
         {
             var article = await _articleRepository.GetBySlugAsync(slug);
-            if (article == null)
-                return false;
-
-            if (article.AuthorId != userId)
+            if (article == null || article.AuthorId != userId)
                 return false;
 
             await _articleRepository.DeleteAsync(article);
             return true;
         }
 
-
-        public async Task<object> GetFeedArticlesAsync(int limit, int offset, int userId)
+        public async Task<ArticleListResponse> GetFeedArticlesAsync(int limit, int offset, int userId)
         {
             var followingIds = await _userRepository.GetFollowingIdsAsync(userId);
-
             var totalCount = await _articleRepository.CountByAuthorsAsync(followingIds);
             var articles = await _articleRepository.GetByAuthorsAsync(followingIds, limit, offset);
 
-            var result = new List<object>();
+            var result = new List<ArticleResponse>();
             foreach (var article in articles)
             {
                 var articleData = await BuildArticleData(article, userId);
                 result.Add(articleData);
             }
 
-            return new { articles = result, articlesCount = totalCount };
+            return new ArticleListResponse
+            {
+                Articles = result,
+                ArticlesCount = totalCount
+            };
         }
 
-
-        public async Task<object?> FavoriteArticleAsync(string slug, int userId)
+        public async Task<ArticleResponse?> FavoriteArticleAsync(string slug, int userId)
         {
             var article = await _articleRepository.GetBySlugAsync(slug);
             if (article == null)
@@ -167,8 +138,7 @@ namespace RealWorldApp.Application.Services
             return await BuildArticleData(article, userId);
         }
 
-
-        public async Task<object?> UnfavoriteArticleAsync(string slug, int userId)
+        public async Task<ArticleResponse?> UnfavoriteArticleAsync(string slug, int userId)
         {
             var article = await _articleRepository.GetBySlugAsync(slug);
             if (article == null)
@@ -183,11 +153,37 @@ namespace RealWorldApp.Application.Services
             return await BuildArticleData(article, userId);
         }
 
+        private async Task<ArticleResponse> BuildArticleData(Article article, int? userId)
+        {
+            var author = await _userRepository.GetByIdAsync(article.AuthorId);
+            var tagList = await _articleRepository.GetTagsAsync(article.Id);
+            var favoritesCount = await _favoriteRepository.CountByArticleIdAsync(article.Id);
+            var isFavorited = userId.HasValue && await _favoriteRepository.IsFavoritedAsync(article.Id, userId.Value);
+
+            return new ArticleResponse
+            {
+                Slug = article.Slug,
+                Title = article.Title,
+                Description = article.Description,
+                Body = article.Body,
+                CreatedAt = article.CreatedAt,
+                UpdatedAt = article.UpdatedAt,
+                TagList = tagList,
+                Favorited = isFavorited,
+                FavoritesCount = favoritesCount,
+                Author = new AuthorResponse
+                {
+                    Username = author?.Username ?? "",
+                    Bio = author?.Bio ?? "",
+                    Image = author?.Image ?? "",
+                    Following = false
+                }
+            };
+        }
 
         private string GenerateSlug(string title)
         {
             return title.ToLower().Replace(" ", "-") + "-" + Guid.NewGuid().ToString("N")[..8];
         }
-
     }
 }

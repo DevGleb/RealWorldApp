@@ -24,7 +24,7 @@ namespace RealWorldApp.Controllers
                 : null;
 
             var result = await _profileService.GetProfileAsync(username, currentUserId);
-            return result is null ? NotFound() : Ok(result);
+            return result is null ? NotFound() : Ok(new { profile = result });
         }
 
         [HttpPost("{username}/follow")]
@@ -33,7 +33,7 @@ namespace RealWorldApp.Controllers
         {
             var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var result = await _profileService.FollowUserAsync(username, currentUserId);
-            return result is null ? NotFound() : Ok(result);
+            return result is null ? NotFound() : Ok(new { profile = result });
         }
 
         [HttpDelete("{username}/follow")]
@@ -42,7 +42,7 @@ namespace RealWorldApp.Controllers
         {
             var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var result = await _profileService.UnfollowUserAsync(username, currentUserId);
-            return result is null ? NotFound() : Ok(result);
+            return result is null ? NotFound() : Ok(new { profile = result });
         }
     }
 }

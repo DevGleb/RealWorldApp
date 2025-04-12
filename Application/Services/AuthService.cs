@@ -1,5 +1,6 @@
 ﻿using RealWorldApp.Application.Interfaces;
 using RealWorldApp.Domain.Interfaces;
+using RealWorldApp.DTOs.Responses;
 using RealWorldApp.Models;
 using RealWorldApp.Services;
 using BCrypt.Net;
@@ -17,7 +18,7 @@ namespace RealWorldApp.Application.Services
             _jwtService = jwtService;
         }
 
-        public async Task<object> RegisterAsync(RegisterRequest request)
+        public async Task<CurrentUserResponse> RegisterAsync(RegisterRequest request)
         {
             var existing = await _userRepository.GetByEmailAsync(request.User.Email);
             if (existing != null)
@@ -38,20 +39,20 @@ namespace RealWorldApp.Application.Services
 
             await _userRepository.AddAsync(user);
 
-            return new
+            return new CurrentUserResponse
             {
-                user = new
+                User = new UserDto
                 {
-                    username = user.Username,
-                    email = user.Email,
-                    bio = user.Bio,
-                    image = user.Image,
-                    token = _jwtService.GenerateToken(user.Id, user.Email)
+                    Username = user.Username,
+                    Email = user.Email,
+                    Bio = user.Bio,
+                    Image = user.Image,
+                    Token = _jwtService.GenerateToken(user.Id, user.Email)
                 }
             };
         }
 
-        public async Task<object?> LoginAsync(LoginRequest request)
+        public async Task<CurrentUserResponse?> LoginAsync(LoginRequest request)
         {
             var user = await _userRepository.GetByEmailAsync(request.User.Email);
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.User.Password, user.PasswordHash))
@@ -59,33 +60,33 @@ namespace RealWorldApp.Application.Services
                 return null;
             }
 
-            return new
+            return new CurrentUserResponse
             {
-                user = new
+                User = new UserDto
                 {
-                    username = user.Username,
-                    email = user.Email,
-                    bio = user.Bio,
-                    image = user.Image,
-                    token = _jwtService.GenerateToken(user.Id, user.Email)
+                    Username = user.Username,
+                    Email = user.Email,
+                    Bio = user.Bio,
+                    Image = user.Image,
+                    Token = _jwtService.GenerateToken(user.Id, user.Email)
                 }
             };
         }
 
-        public async Task<object?> GetCurrentUserAsync(int userId)
+        public async Task<CurrentUserResponse?> GetCurrentUserAsync(int userId)
         {
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null) return null;
 
-            return new
+            return new CurrentUserResponse
             {
-                user = new
+                User = new UserDto
                 {
-                    username = user.Username,
-                    email = user.Email,
-                    bio = user.Bio,
-                    image = user.Image,
-                    token = _jwtService.GenerateToken(user.Id, user.Email)
+                    Username = user.Username,
+                    Email = user.Email,
+                    Bio = user.Bio,
+                    Image = user.Image,
+                    Token = _jwtService.GenerateToken(user.Id, user.Email)
                 }
             };
         }

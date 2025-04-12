@@ -25,7 +25,7 @@ namespace RealWorldApp.Controllers
         {
             var userId = GetUserIdOrNull();
             var result = await _articleService.GetAllArticlesAsync(limit, offset, userId);
-            return Ok(result);
+            return Ok(new { articles = result });
         }
 
         [HttpGet("{slug}")]
@@ -33,9 +33,13 @@ namespace RealWorldApp.Controllers
         {
             var userId = GetUserIdOrNull();
             var result = await _articleService.GetArticleBySlugAsync(slug, userId);
-            return result is null ? NotFound() : Ok(result);
+            return result is null ? NotFound() : Ok(new { article = result });
         }
 
+
+
+        [HttpPost]
+        [Authorize]
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> CreateArticle([FromBody] ArticleRequest request)
@@ -57,19 +61,24 @@ namespace RealWorldApp.Controllers
             }
 
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            var result = await _articleService.CreateArticleAsync(data, userId);
+            var articleResponse = await _articleService.CreateArticleAsync(data, userId);
 
-            return Created($"/api/articles/{((dynamic)result).slug}", new { article = result });
+            return Created($"/api/articles/{articleResponse.Slug}", new { article = articleResponse });
         }
+
 
         [HttpPut("{slug}")]
         [Authorize]
-        public async Task<IActionResult> UpdateArticle(string slug, [FromBody] Article updated)
+        public async Task<IActionResult> UpdateArticle(string slug, [FromBody] ArticleRequest request)
         {
+            var updated = request.Article;
+
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var result = await _articleService.UpdateArticleAsync(slug, updated, userId);
+
             return result is null ? NotFound() : Ok(new { article = result });
         }
+
 
         [HttpDelete("{slug}")]
         [Authorize]
@@ -86,7 +95,7 @@ namespace RealWorldApp.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var result = await _articleService.GetFeedArticlesAsync(limit, offset, userId);
-            return Ok(result);
+            return Ok(new { articles = result });
         }
 
         [HttpPost("{slug}/favorite")]
